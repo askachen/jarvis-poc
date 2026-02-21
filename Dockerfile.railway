@@ -1,0 +1,71 @@
+# ==============================================
+# Stage 1: Build Frontend
+# ==============================================
+FROM node:20-alpine AS frontend-build
+
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+RUN npm install
+
+COPY frontend/ ./
+
+# Build the React app (outputs to /frontend/dist)
+RUN npm run build
+
+
+# ==============================================
+# Stage 2: Build Backend
+# ==============================================
+FROM node:20-alpine AS backend-build
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY backend/package*.json ./
+RUN npm install
+
+COPY backend/prisma ./prisma
+RUN npx prisma generate
+
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
+
+# Compile TypeScript → dist/
+RUN npm run build
+
+
+# ==============================================
+# Stage 3: Production Runtime
+# ==============================================
+FROM node:20-alpine AS production
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Backend compiled JS
+COPY --from=backend-build /app/dist ./dist
+
+# All node_modules (includes ts-node for seed script)
+COPY --from=backend-build /app/node_modules ./node_modules
+
+# Prisma schema + seed script
+COPY --from=backend-build /app/prisma ./prisma
+
+# tsconfig needed by ts-node when running seed.ts
+COPY --from=backend-build /app/tsconfig.json ./
+
+# package.json
+COPY backend/package*.json ./
+
+# Frontend built static files (served by Express in production)
+COPY --from=frontend-build /frontend/dist ./public
+
+# Directory for user file uploads
+RUN mkdir -p uploads
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npx ts-node prisma/seed.ts && node dist/index.js"]

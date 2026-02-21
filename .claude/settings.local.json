@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pandoc:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(printenv:*)",
+      "Bash(sort echo \"\" echo \"=== Line counts ===\" wc -l /c/Claude/JarvisPOC/backend/src/**/*.ts /c/Claude/JarvisPOC/frontend/src/**/*.{ts,tsx})",
+      "Bash(docker-compose up:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(docker-compose exec:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(curl:*)",
+      "Bash(docker-compose:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(\"C:/Claude/JarvisPOC/skills/SKILL.md\":*)",
+      "Bash(python3:*)",
+      "Bash(TMPDIR=\"C:\\\\Users\\\\askac\\\\AppData\\\\Local\\\\Temp\\\\skills_build\":*)",
+      "Bash(SKILLS_OUT=\"C:\\\\Claude\\\\JarvisPOC\\\\skills\")",
+      "Bash(__NEW_LINE_8f25ccae033de21b__ powershell -Command \":*)"
+    ]
+  }
+}
