@@ -261,6 +261,7 @@ export function callMcpTool(
       reject: (e) => { clearTimeout(timer); reject(e); },
     });
     try {
+      if (!session.child.stdin) throw new Error('MCP process stdin is not available');
       session.child.stdin.write(
         JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: toolName, arguments: toolInput } }) + '\n'
       );
