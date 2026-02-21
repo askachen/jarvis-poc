@@ -22,6 +22,7 @@ export interface FileAttachment {
   size: number;
   type: string;
   extractedText?: string;
+  parseError?: string;
 }
 
 export const conversationsApi = {
