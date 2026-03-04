@@ -13,6 +13,15 @@ import { skillsRouter } from './routes/skills';
 import { adminRouter } from './routes/admin';
 import { startScheduler } from './services/scheduler';
 
+// Prevent unhandled errors from crashing the process
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Process] Unhandled promise rejection:', reason);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

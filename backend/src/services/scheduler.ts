@@ -18,19 +18,22 @@ export interface SchedulableTask {
 export async function executeTask(task: SchedulableTask): Promise<void> {
   console.log(`[Scheduler] Running task "${task.name}" (${task.id})`);
 
-  const taskRun = await prisma.taskRun.create({
-    data: {
-      taskId: task.id,
-      status: 'running',
-    },
-  });
-
-  await prisma.task.update({
-    where: { id: task.id },
-    data: { lastRunAt: new Date() },
-  });
+  let taskRunId: string | undefined;
 
   try {
+    const taskRun = await prisma.taskRun.create({
+      data: {
+        taskId: task.id,
+        status: 'running',
+      },
+    });
+    taskRunId = taskRun.id;
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { lastRunAt: new Date() },
+    });
+
     let effectivePrompt = task.prompt;
     if (hasEmailKeywords(task.prompt)) {
       const connector = await prisma.outlookConnector.findUnique({ where: { userId: task.userId } });
@@ -63,26 +66,31 @@ export async function executeTask(task: SchedulableTask): Promise<void> {
     console.log(`[Scheduler] Task "${task.name}" succeeded`);
   } catch (e: any) {
     const errorMessage = e?.message || 'Unknown error';
-
-    await prisma.taskRun.update({
-      where: { id: taskRun.id },
-      data: {
-        status: 'failed',
-        error: errorMessage,
-        finishedAt: new Date(),
-      },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: task.userId,
-        title: `Task "${task.name}" failed`,
-        body: errorMessage.slice(0, 500),
-        taskRunId: taskRun.id,
-      },
-    });
-
     console.error(`[Scheduler] Task "${task.name}" failed:`, errorMessage);
+
+    if (taskRunId) {
+      try {
+        await prisma.taskRun.update({
+          where: { id: taskRunId },
+          data: {
+            status: 'failed',
+            error: errorMessage,
+            finishedAt: new Date(),
+          },
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: task.userId,
+            title: `Task "${task.name}" failed`,
+            body: errorMessage.slice(0, 500),
+            taskRunId,
+          },
+        });
+      } catch (dbErr: any) {
+        console.error(`[Scheduler] Failed to update task run status:`, dbErr?.message);
+      }
+    }
   }
 }
 
@@ -97,7 +105,11 @@ export function scheduleTask(task: SchedulableTask): void {
     return;
   }
 
-  const job = cron.schedule(task.cronExpr, () => executeTask(task), {
+  const job = cron.schedule(task.cronExpr, () => {
+    executeTask(task).catch((err) => {
+      console.error(`[Scheduler] Unhandled error in task "${task.name}":`, err?.message || err);
+    });
+  }, {
     timezone: 'Asia/Taipei',
   });
 
